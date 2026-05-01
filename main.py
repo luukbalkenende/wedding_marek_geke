@@ -6,7 +6,7 @@ from typing import Iterable
 
 from hills import gaussian_height_map, lon_lat_to_normalized_xy, normalize_height
 from locations import DEFAULT_LOCATIONS, DESTINATIONS
-from optimizer import run_ball_roll, run_gradient_ascent
+from optimizer import run_ball_roll, run_gradient_descent
 from renderer import (
     load_world_texture,
     save_hilly_world_png,
@@ -149,13 +149,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--gd-learning-rate",
         type=float,
         default=DEFAULT_GD_LEARNING_RATE,
-        help=f"Gradient ascent learning rate (default: {DEFAULT_GD_LEARNING_RATE}).",
+        help=f"Gradient descent learning rate (default: {DEFAULT_GD_LEARNING_RATE}).",
     )
     parser.add_argument(
         "--gd-max-iters",
         type=int,
         default=DEFAULT_GD_MAX_ITERS,
-        help=f"Gradient ascent max iterations (default: {DEFAULT_GD_MAX_ITERS}).",
+        help=f"Gradient descent max iterations (default: {DEFAULT_GD_MAX_ITERS}).",
     )
     parser.add_argument(
         "--gd-convergence-tol",
@@ -337,7 +337,7 @@ def main() -> None:
             rng_seed=args.gd_seed,
         )
     else:
-        ascent_result = run_gradient_ascent(
+        ascent_result = run_gradient_descent(
             heights_norm=heights_norm,
             learning_rate=args.gd_learning_rate,
             max_iters=args.gd_max_iters,
@@ -357,7 +357,7 @@ def main() -> None:
         )
     else:
         print(
-            "Worst location possible is found to be in: "
+            "Lowest terrain point reached near: "
             f"lon={lon:.4f}, lat={lat:.4f} "
             f"(iterations={ascent_result.iterations})"
         )

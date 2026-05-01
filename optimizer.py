@@ -6,8 +6,8 @@ import numpy as np
 
 
 @dataclass
-class GradientAscentResult:
-    """Container for optimization result."""
+class LandscapeSearchResult:
+    """Container for ball / gradient search endpoint and path."""
 
     best_xy: np.ndarray
     best_lon_lat: tuple[float, float]
@@ -55,7 +55,7 @@ def _bilinear_sample(field: np.ndarray, x: float, y: float) -> float:
     return float((1.0 - ty) * top + ty * bottom)
 
 
-def run_gradient_ascent(
+def run_gradient_descent(
     heights_norm: np.ndarray,
     learning_rate: float,
     max_iters: int,
@@ -65,8 +65,11 @@ def run_gradient_ascent(
     start_offset_north: float,
     start_offset_east: float,
     rng_seed: int | None = None,
-) -> GradientAscentResult:
-    """Run gradient ascent to find highest point in hilly landscape.
+) -> LandscapeSearchResult:
+    """Run gradient descent to find a low point in the height landscape.
+
+    Steps opposite to ``grad(height)``, moving toward a local minimum (valley)
+    of the normalized score field.
 
     Parameters
     ----------
@@ -93,8 +96,8 @@ def run_gradient_ascent(
 
     Returns
     -------
-    GradientAscentResult
-        Optimization result including final coordinate and trajectory.
+    LandscapeSearchResult
+        Search result including final coordinate and trajectory.
     """
     rng = np.random.default_rng(rng_seed)
     max_idx = np.unravel_index(int(np.argmax(heights_norm)), heights_norm.shape)
@@ -120,7 +123,7 @@ def run_gradient_ascent(
         gx = _bilinear_sample(grad_x, xy[0], xy[1])
         gy = _bilinear_sample(grad_y, xy[0], xy[1])
         grad = np.array([gx, gy], dtype=np.float64)
-        delta = learning_rate * grad
+        delta = -learning_rate * grad
         xy = xy + delta
         xy[0] = np.mod(xy[0], 1.0)
         xy[1] = np.clip(xy[1], 0.0, 1.0)
@@ -135,7 +138,7 @@ def run_gradient_ascent(
             break
 
     best_lon_lat = normalized_xy_to_lon_lat(xy)
-    return GradientAscentResult(
+    return LandscapeSearchResult(
         best_xy=xy,
         best_lon_lat=best_lon_lat,
         trajectory_xy=np.asarray(trajectory, dtype=np.float64),
@@ -155,7 +158,7 @@ def run_ball_roll(
     damping: float,
     speed_tol: float,
     rng_seed: int | None = None,
-) -> GradientAscentResult:
+) -> LandscapeSearchResult:
     """Simulate a rolling ball on the height field until it settles.
 
     Parameters
@@ -187,7 +190,7 @@ def run_ball_roll(
 
     Returns
     -------
-    GradientAscentResult
+    LandscapeSearchResult
         Simulation result including final coordinate and trajectory.
     """
     rng = np.random.default_rng(rng_seed)
@@ -231,7 +234,7 @@ def run_ball_roll(
             break
 
     best_lon_lat = normalized_xy_to_lon_lat(xy)
-    return GradientAscentResult(
+    return LandscapeSearchResult(
         best_xy=xy,
         best_lon_lat=best_lon_lat,
         trajectory_xy=np.asarray(trajectory, dtype=np.float64),

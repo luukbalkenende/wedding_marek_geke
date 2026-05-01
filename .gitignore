@@ -32,3 +32,9 @@ Thumbs.db
 # Environment / secrets
 .env
 .env.*
+
+# Private / local-only documents (not pushed to GitHub)
+# Put sensitive files in ./private/ or add exact paths below, e.g.:
+# my-notes.docx
+# planning.pdf
+private/

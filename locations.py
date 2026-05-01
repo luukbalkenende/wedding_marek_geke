@@ -23,4 +23,7 @@ DESTINATIONS: list[tuple[float, float]] = [
     (169.357, -44.562),    # Breast Hill, Otago (LINZ-style coords)
     (81.312, 30.675),      # Mount Kailash, Tibet / China
     (-71.30, -13.87),      # Rainbow Mountain (Vinicunca), Peru
+    (70.90, 26.45),        # Jaisalmer, India
+    (-28.68, 37.10),       # Azores, Portugal
+    (19.66, 49.06),        # High Tatras, Slovakia
 ]

@@ -1,12 +1,26 @@
 # World Hills
 
-Create a hilly world visualization from destination points:
+**Finding the worst place to head for outdoor activities**—or at least playing with that idea visually on a globe.
+
+You give a list of spots (honeymoon hikes, beaches, mountaintops, whatever counts as “the good stuff”). Each one adds a smooth bump on the world. Terrain is **high** near those places and lower elsewhere. From there you run a **gradient-descent style optimization** on that landscape, trace the path, and save renders so you can see where AI has determined for you to **not** go.
+
+(However, if you are more into physics, just use the simulation of a ball rolling downhill).
+
+## How it works
+
+1. **Destinations** — Default lists live in `locations.py` (`DEFAULT_LOCATIONS`, or `DESTINATIONS` with `--destinations`). You can also pass any points as `--location lon,lat`.
+2. **Score field** — For every map position \((x, y)\) in normalized coordinates, the height is built from Gaussian bumps centered on those destinations (width controlled by \(\sigma\)):
 
 $$
 \text{score}(x, y) = \sum_{d \in \text{destinations}} \exp\left(
 -\frac{\text{distance}((x, y), d)^2}{\sigma^2}
 \right)
 $$
+
+3. **Texture** — A cloud-free, equirectangular Earth image is fetched (cached under `.cache/`) and aligned with longitude/latitude.
+4. **Hills & heatmaps** — That score becomes elevation for a **3D hilly globe** and a **top-down** view with height overlaid as color.
+5. **Search path** — **Ball mode** (default): start near the global maximum with a small nudge, integrate velocity with gravity along the slope plus damping until the ball settles. **Gradient mode** (`--search-mode gradient`): gradient **descent** on the height field (steps opposite the gradient toward a low point / valley). The trajectory is drawn on trajectory PNGs and the final `(lon, lat)` is printed.
+6. **Outputs** — By default everything is written under `output/` (filenames match `settings.py`, e.g. `output/test.png` unless you override paths).
 
 ## Project Structure
 
@@ -35,14 +49,16 @@ $$
 ## How To Run
 
 ```bash
+pip install -r requirements.txt
 python main.py
 ```
 
-This writes:
-- `world_hills.png`
-- `world_hills_topdown.png`
-- `world_hills_trajectory.png`
-- `world_hills_topdown_trajectory.png`
+By default this writes (paths are configurable; these match `settings.py`):
+
+- `output/test.png` — 3D hilly globe  
+- `output/test_topdown.png` — top-down map + height heat  
+- `output/test_trajectory.png` — same 3D view with path drawn on the texture  
+- `output/test_topdown_trajectory.png` — top-down with path overlaid  
 
 ## Common Options
 
@@ -52,10 +68,10 @@ python main.py \
   --vertical-scale 0.42 \
   --width 1440 \
   --height 720 \
-  --output "world_hills.png" \
-  --topdown-output "world_hills_topdown.png" \
-  --trajectory-output "world_hills_trajectory.png" \
-  --topdown-trajectory-output "world_hills_topdown_trajectory.png"
+  --output "output/my_hills.png" \
+  --topdown-output "output/my_topdown.png" \
+  --trajectory-output "output/my_trajectory.png" \
+  --topdown-trajectory-output "output/my_topdown_trajectory.png"
 ```
 
 Provide custom destinations by repeating `--location`:
@@ -77,18 +93,17 @@ python main.py --destinations
 
 Any `--location` you pass still wins over `--destinations`.
 
-## Gradient Descent / Ascent Search
+## Gradient Descent Search (`--search-mode gradient`)
 
-The app now runs a gradient-based search on the hill landscape (implemented as
-gradient ascent on height, equivalent to gradient descent on negative height).
+Gradient descent on the **height** landscape: each step moves opposite the gradient
+toward a **local minimum** (valley), i.e. lower score / further from the Gaussian
+peaks around your destinations (modulo which basin you land in).
 
-- Start point: highest point + slight random offset.
-- Step: `learning_rate * gradient`.
-- Stop: movement below threshold for consecutive iterations.
+- Start point: near global maximum + slight random/directional offset.
+- Step: `-learning_rate * gradient(height)`.
+- Stop: movement norm below threshold for consecutive iterations.
 
-At runtime it prints:
-
-`Worst location possible is found to be in: lon=..., lat=...`
+At runtime it prints the end point, e.g. **`Ball settles at location: lon=..., lat=...`** (ball mode) or **`Lowest terrain point reached near: lon=..., lat=...`** (gradient mode).
 
 Main optimizer flags:
 
@@ -118,7 +133,7 @@ Main ball flags:
 - `--ball-speed-tol`
 - `--hilly-sharpen-amount` (0 disables sharpening)
 
-To switch back to old gradient optimizer:
+To use gradient descent instead of the ball:
 
 ```bash
 python main.py --search-mode gradient
